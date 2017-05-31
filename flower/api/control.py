@@ -101,6 +101,14 @@ Shut down a worker
 :statuscode 200: no error
 :statuscode 401: unauthorized request
 :statuscode 404: unknown worker
+
+---
+        description: Shut down a worker
+        responses:
+            200:
+                description: result
+        parameters:
+            workername: '#/parameters/workername'
         """
         if not self.is_worker(workername):
             raise web.HTTPError(404, "Unknown worker '%s'" % workername)
@@ -141,6 +149,14 @@ Restart worker's pool
 :statuscode 401: unauthorized request
 :statuscode 403: pool restart is not enabled (see CELERYD_POOL_RESTARTS)
 :statuscode 404: unknown worker
+
+---
+        description: Restart a worker's pool
+        responses:
+            200:
+                description: result
+        parameters:
+            workername: '#/parameters/workername'
         """
         if not self.is_worker(workername):
             raise web.HTTPError(404, "Unknown worker '%s'" % workername)
@@ -192,6 +208,20 @@ Grow worker's pool
 :statuscode 401: unauthorized request
 :statuscode 403: failed to grow
 :statuscode 404: unknown worker
+
+---
+        description: Grow a worker's pool
+        responses:
+            200:
+                description: result
+        parameters:
+        - $ref: '#/parameters/workername'
+        - name: n
+          in: query
+          description: number of pool processes to grow, default is 1
+          required: false
+          type: integer
+          format: int32
         """
 
         if not self.is_worker(workername):
@@ -244,6 +274,20 @@ Shrink worker's pool
 :statuscode 401: unauthorized request
 :statuscode 403: failed to shrink
 :statuscode 404: unknown worker
+
+---
+        description: Shrink a worker's pool
+        responses:
+            200:
+                description: result
+        parameters:
+        - $ref: '#/parameters/workername'
+        - name: n
+          in: query
+          description: number of pool processes to shrink, default is 1
+          required: false
+          type: integer
+          format: int32
         """
 
         if not self.is_worker(workername):
@@ -299,6 +343,26 @@ Autoscale worker pool
 :statuscode 401: unauthorized request
 :statuscode 403: autoscaling is not enabled (see CELERYD_AUTOSCALER)
 :statuscode 404: unknown worker
+
+---
+        description: Autoscale a worker pool
+        responses:
+            200:
+                description: result
+        parameters:
+        - $ref: '#/parameters/workername'
+        - name: min
+          in: query
+          description: minimum number of pool processes
+          required: false
+          type: integer
+          format: int32
+        - name: max
+          in: query
+          description: maximum number of pool processes
+          required: false
+          type: integer
+          format: int32
         """
 
         if not self.is_worker(workername):
@@ -357,6 +421,19 @@ Start consuming from a queue
 :statuscode 401: unauthorized request
 :statuscode 403: failed to add consumer
 :statuscode 404: unknown worker
+
+---
+        description: Start consuming from a queue
+        responses:
+            200:
+                description: result
+        parameters:
+        - $ref: '#/parameters/workername'
+        - name: queue
+          in: query
+          description: the name of a queue
+          required: true
+          type: string
         """
         if not self.is_worker(workername):
             raise web.HTTPError(404, "Unknown worker '%s'" % workername)
@@ -411,6 +488,19 @@ Stop consuming from a queue
 :statuscode 401: unauthorized request
 :statuscode 403: failed to cancel consumer
 :statuscode 404: unknown worker
+
+---
+        description: Stop consuming from a queue
+        responses:
+            200:
+                description: result
+        parameters:
+        - $ref: '#/parameters/workername'
+        - name: queue
+          in: query
+          description: the name of a queue
+          required: true
+          type: string
         """
         if not self.is_worker(workername):
             raise web.HTTPError(404, "Unknown worker '%s'" % workername)
@@ -464,6 +554,19 @@ Revoke a task
 :reqheader Authorization: optional OAuth token to authenticate
 :statuscode 200: no error
 :statuscode 401: unauthorized request
+
+---
+        description: Revoke a task
+        responses:
+            200:
+                description: result
+        parameters:
+        - $ref: '#/parameters/taskid'
+        - name: terminate
+          in: query
+          description: terminate the task if it is running
+          required: false
+          type: boolean
         """
         logger.info("Revoking task '%s'", taskid)
         terminate = self.get_argument('terminate', default=False, type=bool)
@@ -505,6 +608,31 @@ Change soft and hard time limits for a task
 :statuscode 200: no error
 :statuscode 401: unauthorized request
 :statuscode 404: unknown task/worker
+
+---
+        description: Change soft and hard time limits for a task
+        responses:
+            200:
+                description: result
+        parameters:
+        - $ref: '#/parameters/taskname'
+        - name: workername
+          in: query
+          description: the name of a worker
+          required: true
+          type: string
+        - name: soft
+          in: query
+          description: the soft timeout limit
+          required: false
+          type: integer
+          format: int32
+        - name: hard
+          in: query
+          description: the hard timeout limit
+          required: false
+          type: integer
+          format: int32
         """
         workername = self.get_argument('workername')
         hard = self.get_argument('hard', default=None, type=float)
@@ -565,6 +693,25 @@ Change rate limit for a task
 :statuscode 200: no error
 :statuscode 401: unauthorized request
 :statuscode 404: unknown task/worker
+
+---
+        description: Change rate limit for a task
+        responses:
+            200:
+                description: result
+        parameters:
+        - $ref: '#/parameters/taskname'
+        - name: workername
+          in: query
+          description: the name of a worker
+          required: true
+          type: string
+        - name: rateLimit
+          in: query
+          description: the rate limit to apply
+          required: true
+          type: integer
+          format: int32
         """
         workername = self.get_argument('workername')
         ratelimit = self.get_argument('ratelimit')

@@ -153,6 +153,27 @@ List workers
 :reqheader Authorization: optional OAuth token to authenticate
 :statuscode 200: no error
 :statuscode 401: unauthorized request
+
+---
+        description: List workers
+        responses:
+            200:
+                description: result
+        parameters:
+        - name: refresh
+          in: query
+          description: run inspect to get updated list of workers
+          required: false
+          type: boolean
+        - name: workername
+          in: query
+          description: get info for workername
+          required: false
+          type: string
+        - name: status
+          in: query
+          description: only get worker status info
+          type: boolean
         """
         refresh = self.get_argument('refresh', default=False, type=bool)
         status = self.get_argument('status', default=False, type=bool)

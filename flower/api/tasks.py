@@ -120,6 +120,25 @@ Execute a task by name and wait results
 :statuscode 200: no error
 :statuscode 401: unauthorized request
 :statuscode 404: unknown task
+
+---
+        description: Execute a task by name and wait results
+        responses:
+            200:
+                description: result
+        parameters:
+        - $ref: '#/parameters/taskname'
+        - name: args
+          in: body
+          description: the dictionary of args and kwargs
+          schema:
+            type: object
+            properties:
+              args:
+                type: array
+              kwargs:
+                type: object
+...
         """
         args, kwargs, options = self.get_task_args()
         logger.debug("Invoking a task '%s' with '%s' and '%s'",
@@ -198,6 +217,26 @@ Execute a task
 :statuscode 200: no error
 :statuscode 401: unauthorized request
 :statuscode 404: unknown task
+
+---
+        description: Execute a task
+        responses:
+            200:
+                description: result
+        parameters:
+        - $ref: '#/parameters/taskname'
+        - name: args
+          in: body
+          description: the dictionary of args, kwargs, and apply-async options
+          schema:
+            type: object
+            properties:
+              args:
+                type: array
+              kwargs:
+                type: object
+              options:
+                type: object
         """
         args, kwargs, options = self.get_task_args()
         logger.debug("Invoking a task '%s' with '%s' and '%s'",
@@ -260,6 +299,24 @@ Execute a task by name (doesn't require task sources)
 :statuscode 200: no error
 :statuscode 401: unauthorized request
 :statuscode 404: unknown task
+
+---
+        description: Execute a task by name (Doesn't require a task source)
+        responses:
+            200:
+                description: result
+        parameters:
+        - $ref: '#/parameters/taskname'
+        - name: args
+          in: body
+          description: the dictionary of args, and kwargs
+          schema:
+            type: object
+            properties:
+              args:
+                type: array
+              kwargs:
+                type: object
         """
         args, kwargs, options = self.get_task_args()
         logger.debug("Invoking task '%s' with '%s' and '%s'",
@@ -304,6 +361,20 @@ Get a task result
 :statuscode 200: no error
 :statuscode 401: unauthorized request
 :statuscode 503: result backend is not configured
+
+---
+        description: Execute a task by name and wait results
+        responses:
+            200:
+                description: result
+        parameters:
+        - $ref: '#/parameters/taskid'
+        - name: timeout
+          in: query
+          description: how long to wait, in seconds, before the operation times out
+          required: false
+          type: integer
+          format: int32
         """
         timeout = self.get_argument('timeout', None)
         timeout = float(timeout) if timeout is not None else None
@@ -350,6 +421,14 @@ Abort a running task
 :statuscode 200: no error
 :statuscode 401: unauthorized request
 :statuscode 503: result backend is not configured
+
+---
+        description: Abort a running task
+        responses:
+            200:
+                description: result
+        parameters:
+            taskid: '#/parameters/taskid'
         """
         logger.info("Aborting task '%s'", taskid)
 
@@ -366,6 +445,13 @@ class GetQueueLengths(BaseTaskHandler):
     @web.authenticated
     @gen.coroutine
     def get(self):
+        """
+        ---
+        description: Get queue lengths
+        responses:
+            200:
+                description: result
+        """
         app = self.application
         broker_options = self.capp.conf.BROKER_TRANSPORT_OPTIONS
 
@@ -472,6 +558,34 @@ List tasks
 :reqheader Authorization: optional OAuth token to authenticate
 :statuscode 200: no error
 :statuscode 401: unauthorized request
+
+---
+        description: List tasks
+        responses:
+            200:
+                description: Result
+        parameters:
+        - name: limit
+          in: query
+          description: the maximum number of tasks
+          required: false
+          type: integer
+          format: int32
+        - name: workername
+          in: query
+          description: filter task by workername
+          required: false
+          type: string
+        - name: taskname
+          in: query
+          description: filter task by taskname
+          required: false
+          type: string
+        - name: state
+          in: query
+          description: filter task by state
+          required: false
+          type: string
         """
         app = self.application
         limit = self.get_argument('limit', None)
@@ -525,6 +639,12 @@ List (seen) task types
 :reqheader Authorization: optional OAuth token to authenticate
 :statuscode 200: no error
 :statuscode 401: unauthorized request
+
+---
+        description: List (seen) task types
+        responses:
+            200:
+                description: result
         """
         seen_task_types = self.application.events.state.task_types()
 
@@ -589,6 +709,14 @@ Get a task info
 :statuscode 200: no error
 :statuscode 401: unauthorized request
 :statuscode 404: unknown task
+
+---
+        description: Get task info
+        responses:
+            200:
+                description: result
+        parameters:
+            taskid: '#/parameters/taskid'
         """
 
         task = tasks.get_task_by_id(self.application.events, taskid)

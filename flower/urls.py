@@ -26,26 +26,7 @@ settings = dict(
     login_url='/login',
 )
 
-
-handlers = [
-    # App
-    url(r"/", DashboardView, name='main'),
-    url(r"/dashboard", DashboardView, name='dashboard'),
-    url(r"/worker/(.+)", WorkerView, name='worker'),
-    url(r"/task/(.+)", TaskView, name='task'),
-    url(r"/tasks", TasksView, name='tasks'),
-    url(r"/tasks/datatable", TasksDataTable),
-    url(r"/broker", BrokerView, name='broker'),
-    # Worker API
-    (r"/api/workers", workers.ListWorkers),
-    (r"/api/worker/shutdown/(.+)", control.WorkerShutDown),
-    (r"/api/worker/pool/restart/(.+)", control.WorkerPoolRestart),
-    (r"/api/worker/pool/grow/(.+)", control.WorkerPoolGrow),
-    (r"/api/worker/pool/shrink/(.+)", control.WorkerPoolShrink),
-    (r"/api/worker/pool/autoscale/(.+)", control.WorkerPoolAutoscale),
-    (r"/api/worker/queue/add-consumer/(.+)", control.WorkerQueueAddConsumer),
-    (r"/api/worker/queue/cancel-consumer/(.+)",
-        control.WorkerQueueCancelConsumer),
+task_handlers = [
     # Task API
     (r"/api/tasks", tasks.ListTasks),
     (r"/api/task/types", tasks.ListTaskTypes),
@@ -59,6 +40,37 @@ handlers = [
     (r"/api/task/timeout/(.+)", control.TaskTimout),
     (r"/api/task/rate-limit/(.+)", control.TaskRateLimit),
     (r"/api/task/revoke/(.+)", control.TaskRevoke),
+]
+
+worker_handlers = [
+    # Worker API
+    (r"/api/workers", workers.ListWorkers),
+    (r"/api/worker/shutdown/(.+)", control.WorkerShutDown),
+    (r"/api/worker/pool/restart/(.+)", control.WorkerPoolRestart),
+    (r"/api/worker/pool/grow/(.+)", control.WorkerPoolGrow),
+    (r"/api/worker/pool/shrink/(.+)", control.WorkerPoolShrink),
+    (r"/api/worker/pool/autoscale/(.+)", control.WorkerPoolAutoscale),
+    (r"/api/worker/queue/add-consumer/(.+)", control.WorkerQueueAddConsumer),
+    (r"/api/worker/queue/cancel-consumer/(.+)",
+     control.WorkerQueueCancelConsumer),
+]
+
+error_handlers = [
+    # Error
+    (r".*", NotFoundErrorHandler),
+]
+
+from .api import spec
+
+handlers = [
+    # App
+    url(r"/", DashboardView, name='main'),
+    url(r"/dashboard", DashboardView, name='dashboard'),
+    url(r"/worker/(.+)", WorkerView, name='worker'),
+    url(r"/task/(.+)", TaskView, name='task'),
+    url(r"/tasks", TasksView, name='tasks'),
+    url(r"/tasks/datatable", TasksDataTable),
+    url(r"/broker", BrokerView, name='broker'),
     # Events WebSocket API
     (r"/api/task/events/task-sent/(.*)", events.TaskSent),
     (r"/api/task/events/task-received/(.*)", events.TaskReceived),
@@ -83,6 +95,9 @@ handlers = [
     (r"/login", auth.LoginHandler),
     url(r"/logout", auth.LogoutHandler, name='logout'),
 
-    # Error
-    (r".*", NotFoundErrorHandler),
-]
+    # OpenAPI Spec
+    (r"/api/swagger.json", spec.GetSpec),
+] \
+           + task_handlers \
+           + worker_handlers \
+           + error_handlers

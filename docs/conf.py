@@ -36,6 +36,7 @@ extensions = [
     # 'sphinxcontrib.fulltoc',
     'sphinxcontrib.httpdomain',
     'sphinxcontrib.autohttp.tornado',
+    'sphinx.ext.autodoc',
 ]
 
 templates_path = ['_templates']
@@ -283,3 +284,12 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'http://docs.python.org/': None}
+
+# Ignore ApiSpec yaml in docstrings
+from sphinx.ext.autodoc import between
+def setup(app):
+    # Register a sphinx.ext.autodoc.between listener to ignore everything
+    # between lines that contain --- or ...
+    app.connect('autodoc-process-docstring', between('---|\.\.\.', exclude=True))
+    print('Registered autodoc-process-docstring event')
+    return app
