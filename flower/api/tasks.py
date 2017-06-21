@@ -308,7 +308,7 @@ Get a task result
         timeout = self.get_argument('timeout', None)
         timeout = float(timeout) if timeout is not None else None
 
-        result = AsyncResult(taskid)
+        result = AsyncResult(taskid, backend=self.capp.backend)
         if not self.backend_configured(result):
             raise HTTPError(503)
         response = {'task-id': taskid, 'state': result.state}
@@ -353,7 +353,7 @@ Abort a running task
         """
         logger.info("Aborting task '%s'", taskid)
 
-        result = AbortableAsyncResult(taskid)
+        result = AbortableAsyncResult(taskid, backend=self.capp.backend)
         if not self.backend_configured(result):
             raise HTTPError(503)
 
