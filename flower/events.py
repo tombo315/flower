@@ -35,17 +35,18 @@ class EventsState(State):
         super(EventsState, self).__init__(*args, **kwargs)
         self.counter = collections.defaultdict(Counter)
 
-    def event(self, event):
+    def event(self, event, websockets=True):
         worker_name = event['hostname']
         event_type = event['type']
 
         self.counter[worker_name][event_type] += 1
 
-        # Send event to api subscribers (via websockets)
-        classname = api.events.getClassName(event_type)
-        cls = getattr(api.events, classname, None)
-        if cls:
-            cls.send_message(event)
+        if websockets:
+            # Send event to api subscribers (via websockets)
+            classname = api.events.getClassName(event_type)
+            cls = getattr(api.events, classname, None)
+            if cls:
+                cls.send_message(event)
 
         # Save the event
         super(EventsState, self).event(event)
@@ -55,7 +56,8 @@ class Events(threading.Thread):
     events_enable_interval = 5000
 
     def __init__(self, capp, db=None, persistent=False,
-                 enable_events=True, io_loop=None, **kwargs):
+                 enable_events=True, io_loop=None, storage_driver=None,
+                 **kwargs):
         threading.Thread.__init__(self)
         self.daemon = True
 
@@ -64,6 +66,7 @@ class Events(threading.Thread):
 
         self.db = db
         self.persistent = persistent
+        self.storage_driver = storage_driver
         self.enable_events = enable_events
         self.state = None
 
@@ -73,11 +76,29 @@ class Events(threading.Thread):
             self.persistent = False
 
         if self.persistent:
-            logger.debug("Loading state from '%s'...", self.db)
-            state = shelve.open(self.db)
-            if state:
-                self.state = state['events']
-            state.close()
+            if storage_driver == 'file':
+                logger.debug("Loading state from '%s'...", self.db)
+                state = shelve.open(self.db)
+                if state:
+                    self.state = state['events']
+                state.close()
+
+            elif storage_driver == 'postgres':
+                from flower.utils import pg_storage
+                self.state = EventsState(
+                    callback=pg_storage.event_callback, **kwargs
+                )
+
+                # When loading past events, do not call the event callback
+                # Need to do it like this instead of overriding the callable
+                # because the callable is cached in the closure of
+                # celery.events.state.State._create_dispatcher
+                pg_storage.skip_callback = True
+                try:
+                    for event in pg_storage.get_all_events():
+                        self.state.event(event, websockets=False)
+                finally:
+                    pg_storage.skip_callback = False
 
         if not self.state:
             self.state = EventsState(**kwargs)
@@ -92,7 +113,7 @@ class Events(threading.Thread):
             self.timer.start()
 
     def stop(self):
-        if self.persistent:
+        if self.persistent and self.storage_driver == 'file':
             logger.debug("Saving state to '%s'...", self.db)
             state = shelve.open(self.db)
             state['events'] = self.state
