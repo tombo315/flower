@@ -67,6 +67,8 @@ define("auth_provider", default='flower.views.auth.GoogleAuth2LoginHandler',
 define("url_prefix", type=str, help="base url prefix")
 define("storage_driver", type=str, default="file",
        help='Which driver to use for storing events ("file" or "postgres")')
+define("storage_max_events", type=int, default=30000,
+       help="Max events to load from persistence store")
 define("pg_user", type=str, help="Postgres user name")
 define("pg_pass", type=str, help="Postgres user password")
 define("pg_database", type=str, default="flower_events",
@@ -75,6 +77,7 @@ define("pg_host", type=str, default="localhost", help="Postgres host name")
 define("pg_port", type=int, default=5432, help="Postgres server port")
 define("pg_ssl", type=bool, default=False,
        help="Use SSL encryption for Postgres connection")
+
 
 
 # deprecated options

@@ -27,7 +27,14 @@ _schema = (
 
 _add_event = """INSERT INTO events (time, data) VALUES (%s, %s) ON CONFLICT DO NOTHING"""
 
-_all_events = """SELECT data FROM events ORDER BY time ASC"""
+_get_events = """SELECT data FROM (
+              SELECT *
+              FROM events
+              ORDER BY id DESC
+              LIMIT {max_events}
+              ) subevents
+              ORDER BY time ASC
+              """
 
 _ignored_events = {
     'worker-offline',
@@ -84,13 +91,13 @@ def close_connection():
         connection = None
 
 
-def get_all_events():
+def get_events(max_events):
     logger.debug('Events loading from postgresql persistence backend')
     cursor = connection.cursor()
     try:
-        cursor.execute(_all_events)
+        cursor.execute(_get_events.format(max_events=max_events))
         for row in cursor:
             yield row[0]
-        logger.debug('Events loaded from postgresql persistence backend')
+        logger.debug('{} Events loaded from postgresql persistence backend'.format(cursor.rowcount))
     finally:
         cursor.close()

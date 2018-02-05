@@ -57,7 +57,7 @@ class Events(threading.Thread):
 
     def __init__(self, capp, db=None, persistent=False,
                  enable_events=True, io_loop=None, storage_driver=None,
-                 **kwargs):
+                 storage_max_events=None, **kwargs):
         threading.Thread.__init__(self)
         self.daemon = True
 
@@ -67,6 +67,7 @@ class Events(threading.Thread):
         self.db = db
         self.persistent = persistent
         self.storage_driver = storage_driver
+        self.storage_max_events = storage_max_events
         self.enable_events = enable_events
         self.state = None
 
@@ -94,8 +95,9 @@ class Events(threading.Thread):
                 # because the callable is cached in the closure of
                 # celery.events.state.State._create_dispatcher
                 pg_storage.skip_callback = True
+
                 try:
-                    for event in pg_storage.get_all_events():
+                    for event in pg_storage.get_events(max_events=self.storage_max_events):
                         self.state.event(event, websockets=False)
                 finally:
                     pg_storage.skip_callback = False
