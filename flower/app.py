@@ -42,6 +42,7 @@ class Flower(tornado.web.Application):
                 self.options.pg_port,
                 self.options.pg_ssl,
             )
+            pg_storage.maybe_create_schema()
 
         self.capp = capp or celery.Celery()
         self.events = events or Events(

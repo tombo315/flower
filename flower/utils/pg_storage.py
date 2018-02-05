@@ -1,12 +1,16 @@
 import json
 import logging
 from datetime import datetime
+from socket import error as socketerror
 
 import pg8000
 
 logger = logging.getLogger(__name__)
 connection = None
+_connection_options = {}
 skip_callback = False
+
+REQ_MAX_RETRIES = 2
 
 _all_tables = """
 SELECT * FROM information_schema.tables
@@ -48,26 +52,48 @@ def event_callback(state, event):
         return
 
     cursor = connection.cursor()
-    try:
-        cursor.execute(_add_event, (
-            datetime.fromtimestamp(event['timestamp']),
-            json.dumps(event)
-        ))
-        connection.commit()
-    except Exception:
-        connection.rollback()
-        raise
-    finally:
-        cursor.close()
+    retries_remaining = REQ_MAX_RETRIES
+    while True:
+        try:
+            cursor.execute(_add_event, (
+                datetime.fromtimestamp(event['timestamp']),
+                json.dumps(event)
+            ))
+            connection.commit()
+        except (socketerror, pg8000.InterfaceError):
+            if retries_remaining > 0:
+                logger.warning('Flower encountered a connection error with PostGreSQL database. Retrying.')
+                open_connection(**_connection_options)
+                cursor = connection.cursor()
+                continue
+            else:
+                logger.exception('Flower encountered a connection error with PostGreSQL database. Unable to retry.')
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            cursor.close()
+            return
 
 
 def open_connection(user, password, database, host, port, use_ssl):
     global connection
+    global _connection_options
     connection = pg8000.connect(
         user=user, password=password, database=database,
         host=host, port=port, ssl=use_ssl
     )
+    _connection_options = {'user': user,
+                           'password': password,
+                           'database': database,
+                           'host': host,
+                           'port': port,
+                           'use_ssl': use_ssl
+                           }
 
+
+def maybe_create_schema():
+    global connection
     # Create schema if table is missing
     cursor = connection.cursor()
     try:
@@ -94,10 +120,21 @@ def close_connection():
 def get_events(max_events):
     logger.debug('Events loading from postgresql persistence backend')
     cursor = connection.cursor()
-    try:
-        cursor.execute(_get_events.format(max_events=max_events))
-        for row in cursor:
-            yield row[0]
-        logger.debug('{} Events loaded from postgresql persistence backend'.format(cursor.rowcount))
-    finally:
-        cursor.close()
+    retries_remaining = REQ_MAX_RETRIES
+    while True:
+        try:
+            cursor.execute(_get_events.format(max_events=max_events))
+            for row in cursor:
+                yield row[0]
+            logger.debug('Events loaded from PostGreSQL persistence backend')
+        except (socketerror, pg8000.InterfaceError):
+            if retries_remaining > 0:
+                logger.warning('Flower encountered a connection error with PostGreSQL database. Retrying.')
+                open_connection(**_connection_options)
+                cursor = connection.cursor()
+                continue
+            else:
+                logger.exception('Flower encountered a connection error with PostGreSQL database. Unable to retry.')
+        finally:
+            cursor.close()
+            return
