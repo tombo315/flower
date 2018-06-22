@@ -71,12 +71,12 @@ class BaseHandler(CorsMixin, tornado.web.RequestHandler):
             self.set_header('WWW-Authenticate', 'Basic realm="flower"')
             self.finish('Access denied')
         else:
-            message = None
-            if 'exc_info' in kwargs and\
-                    kwargs['exc_info'][0] == tornado.web.HTTPError:
-                    message = kwargs['exc_info'][1].log_message
+            if 'exc_info' in kwargs:
+                exc_type, exc, tb = kwargs['exc_info']
+                if exc_type == tornado.web.HTTPError:
+                    message = exc.log_message  # may be None
                     self.set_header('Content-Type', 'text/plain')
-                    self.write(message)
+                    self.write(message or str(exc))
             self.set_status(status_code)
 
     def get_current_user(self):
